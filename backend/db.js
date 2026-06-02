@@ -1,9 +1,9 @@
 import dotenv from 'dotenv';
-import pkg from 'pg';
+import pg from 'pg';
 
 dotenv.config();
 
-const { Pool, types } = pkg;
+const { Pool, types } = pg;
 
 // Return DATE columns as plain 'YYYY-MM-DD' strings instead of JavaScript Date objects
 types.setTypeParser(1082, (val) => val);
