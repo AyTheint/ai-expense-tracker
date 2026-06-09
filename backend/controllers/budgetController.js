@@ -1,4 +1,5 @@
 import pool from '../db.js';
+import { analyzeBudgetList } from '../utils/gemini.js'
 
 export const getBudgets = async (req, res) => {
     try {
@@ -107,5 +108,51 @@ export const deleteBudget = async (req, res) => {
     } catch (err) {
         console.error('Error deleting budget:', err);
         res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const analyzeBudgets = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT
+                b.id,
+                b.amount,
+                b.period,
+                c.name AS category_name,
+                COALESCE(SUM(t.amount), 0) AS spent
+            FROM budgets b
+            JOIN categories c ON c.id = b.category_id
+            LEFT JOIN transactions t ON t.category_id = b.category_id
+                AND t.user_id = b.user_id
+                AND t.type = 'expense'
+                AND (
+                    (b.period = 'monthly' AND t.transaction_date >= DATE_TRUNC('month', CURRENT_DATE))
+                    OR (b.period = 'weekly' AND t.transaction_date >= DATE_TRUNC('week', CURRENT_DATE))
+                    OR (b.period = 'yearly' AND t.transaction_date >= DATE_TRUNC('year', CURRENT_DATE))
+                )
+            WHERE b.user_id = $1
+            GROUP BY b.id, c.name`,
+            [req.userId]
+        );
+
+        if(result.rows.length === 0){
+            return res.json({ analyses: [] });
+        }
+
+        const userRes = await pool.query(
+            `SELECT currency FROM users WHERE id = $1`,
+            [req.userId]
+        );
+        const currency = userRes.rows[0]?.currency || 'USD';
+
+        const data = await analyzeBudgetList({
+            budgets: result.rows,
+            currency,
+        });
+
+        res.json(data);
+    } catch (error){
+        console.error("AnalyzeBudgets error:", error);
+        res.status(500).json({message: error.message || "Server error"});
     }
 };
