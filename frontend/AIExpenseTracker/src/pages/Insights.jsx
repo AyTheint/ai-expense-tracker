@@ -80,7 +80,7 @@ const Insights = () => {
 
     const stats = useMemo(() => {
         const latestMonthly = insights.find((i) => i.insight_type === 'monthly_summary');
-        const latestTips    = insights.find((i) => i.insight_type === 'saving_tips');
+        const latestTips    = insights.find((i) => i.insight_type === 'savings_tips');
         const monthly = latestMonthly?.content_json;
         const tips    = latestTips?.content_json;
         const potentialSavings = tips?.tips?.reduce((sum, t) => sum + (Number(t.estimatedSavings) || 0), 0) || 0;
@@ -130,8 +130,8 @@ const Insights = () => {
                     icon={Lightbulb}
                     accentGradient="from-blue-400 to-blue-600"
                     accentText="text-blue-600"
-                    onClick={() => generate('saving_tips')}
-                    generating={generating === 'saving_tips'}
+                    onClick={() => generate('savings_tips')}
+                    generating={generating === 'savings_tips'}
                     lastGeneratedDisplay={stats.tipsDisplayTime}
                 />
             </div>
