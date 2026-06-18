@@ -61,8 +61,16 @@ const Budgets = () => {
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState(null);
-    const [analyses, setAnalyses] = useState({});
-    const [analyzing, setAnalyzing] = useState(true);
+    // Load analyses from localStorage on mount
+    const [analyses, setAnalyses] = useState(() => {
+        try {
+            const saved = localStorage.getItem('budget_analyses');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
+    const [analyzing, setAnalyzing] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -80,14 +88,17 @@ const Budgets = () => {
         }
     };
 
+    // Save to localStorage whenever analyses update
     const analyzeAll = async () => {
         setAnalyses({});
+        localStorage.removeItem('budget_analyses');
         setAnalyzing(true);
         try {
             const res = await api.post(API_PATHS.BUDGETS.ANALYZE);
             const map = {};
             (res.data.analyses || []).forEach((a) => { map[a.budgetId] = a; });
             setAnalyses(map);
+            localStorage.setItem('budget_analyses', JSON.stringify(map)); // persist
         } catch (err) {
             console.error('Failed to analyze budgets', err);
         } finally {
@@ -95,7 +106,9 @@ const Budgets = () => {
         }
     };
 
-    useEffect(() => { fetchData(); analyzeAll(); }, []);
+    useEffect(() => { fetchData(); 
+                    // analyzeAll(); 
+                }, []);
 
     const onEdit = (b) => { setEditing(b); setModalOpen(true); };
     const onCreate = () => { setEditing(null); setModalOpen(true); };
@@ -105,7 +118,11 @@ const Budgets = () => {
         try {
             await api.delete(API_PATHS.BUDGETS.DELETE(id));
             toast.success('Budget deleted');
-            fetchData(); analyzeAll(); notifyNotificationsUpdate();
+            localStorage.removeItem('budget_analyses'); // clear stale analysis
+            setAnalyses({});
+            fetchData();
+            // analyzeAll();
+            notifyNotificationsUpdate();
         } catch (err) {
             toast.error('Failed to delete');
         }
@@ -113,7 +130,10 @@ const Budgets = () => {
 
     const onSaved = () => {
         setModalOpen(false);
-        fetchData(); analyzeAll(); notifyNotificationsUpdate();
+        localStorage.removeItem('budget_analyses'); // clear stale analysis
+        setAnalyses({});
+        // analyzeAll();
+        notifyNotificationsUpdate();
     };
 
     const hasAnalyses = Object.keys(analyses).length > 0;
