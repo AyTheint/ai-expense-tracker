@@ -9,6 +9,41 @@ if (!process.env.GEMINI_API_KEY) {
     console.warn("Warning: GEMINI_API_KEY is not set. AI features will not work");
 }
 
+const MODELS = ['gemini-2-flash', 'gemini-2-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
+
+const generateWithFallback = async (prompt) => {
+    let lastErr;
+    for (const model of MODELS) {
+        try {
+            return await withRetry(() => ai.models.generateContent({ model, contents: prompt }));
+        } catch (err) {
+            lastErr = err;
+            const status = err?.status || err?.error?.code;
+            if (status !== 503 && status !== 429) throw err; // not a capacity issue, don't bother falling back
+            console.warn(`Model ${model} unavailable, trying next fallback...`);
+        }
+    }
+    throw lastErr;
+};
+
+const withRetry = async (fn, { retries = 3, baseDelay = 1000 } = {}) => {
+    let lastErr;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            lastErr = err;
+            const status = err?.status || err?.error?.code;
+            const isRetryable = status === 503 || status === 429;
+            if (!isRetryable || attempt === retries) throw err;
+            const delay = baseDelay * Math.pow(2, attempt); // 1s, 2s, 4s
+            console.warn(`Gemini ${status} — retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`);
+            await new Promise((res) => setTimeout(res, delay));
+        }
+    }
+    throw lastErr;
+};
+
 const stripMarkdown = (text) => {
     let cleaned = text.trim();
     if(cleaned.startsWith('```json')){
@@ -183,10 +218,7 @@ export const generateMonthlyInsights = async ({
     - Reference actual numbers from the data. Tone: friendly but honest.`;
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-lite",
-            contents: prompt,
-        });
+        const response = await generateWithFallback(prompt);
         const cleaned = stripMarkdown(response.text);
         return JSON.parse(cleaned);
     } catch (err) {
@@ -234,10 +266,7 @@ export const generateBudgetAlert = async ({
     - critical: over 100% spent`
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-lite",
-            contents: prompt,
-        });
+        const response = await generateWithFallback(prompt);
         const cleaned = stripMarkdown(response.text);
         return JSON.parse(cleaned);
     } catch (err) {
@@ -282,11 +311,7 @@ export const generateSavingTips = async ({ topCategories, monthlyIncome, currenc
     `
 
     try{
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-lite',
-            contents: prompt,
-        });
-
+        const response = await generateWithFallback(prompt);
         const cleaned = stripMarkdown(response.text);
         return JSON.parse(cleaned);
     } catch (err) {
@@ -330,10 +355,7 @@ export const analyzeTransactionList = async ({ transactions, currency = 'USD'}) 
     }`;
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-lite',
-            contents: prompt,
-        })
+        const response = await generateWithFallback(prompt);
         const cleaned = stripMarkdown(response.text);
         return JSON.parse(cleaned);
     } catch (err) {
@@ -365,11 +387,8 @@ export const analyzeBudgetList = async ({ budgets, currency = 'USD' }) => {
     }`;
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-lite',
-            contents: prompt,
-        });
-        const cleaned =stripMarkdown(response.text);
+        const response = await generateWithFallback(prompt);
+        const cleaned = stripMarkdown(response.text);
         return JSON.parse(cleaned);
     } catch (err) {
         console.error('Gemini API error (analyze budgets): ', err);

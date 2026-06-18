@@ -109,7 +109,7 @@ const Insights = () => {
                 <KpiCard label="Insights generated" value={stats.total}                                                       icon={Sparkles} accent="emerald" />
                 <KpiCard label="Health score"        value={stats.healthScore != null ? `${stats.healthScore}/100` : '—'}     icon={Activity} accent={healthAccent} />
                 <KpiCard label="Potential savings"   value={stats.potentialSavings > 0 ? `$${stats.potentialSavings.toFixed(0)}/mo` : '—'} icon={Wallet} accent="orange" />
-                <KpiCard label="Last analysis"       value={stats.lastAnalysisTime || '—'}                                    icon={Clock}    accent="gray" />
+                <KpiCard label="Last analysis"       value={stats.lastAnalysisTime || '—'}                                    icon={Clock}    accent="violet" />
             </div>
 
             {/* Action cards */}
