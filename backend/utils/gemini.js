@@ -9,7 +9,7 @@ if (!process.env.GEMINI_API_KEY) {
     console.warn("Warning: GEMINI_API_KEY is not set. AI features will not work");
 }
 
-const MODELS = ['gemini-2-flash', 'gemini-2-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
+const MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
 
 const generateWithFallback = async (prompt) => {
     let lastErr;
