@@ -6,20 +6,8 @@ import {
 } from '../utils/gemini.js'
 
 const getUserCurrency = async (userId) => {
-    const result = await pool.query('SELECT currency FROM users WHERE id = $1',
-        [userId]
-    );
+    const result = await pool.query('SELECT currency FROM users WHERE id = $1', [userId]);
     return result.rows[0]?.currency || 'USD';
-};
-
-const formatLocalTimestamp = (date = new Date()) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
 export const getInsights = async (req, res) => {
@@ -30,8 +18,8 @@ export const getInsights = async (req, res) => {
         );
         res.json(result.rows);
     } catch (error) {
-        console.error('GetInsights error: ',error);
-        res.status(500).json({message: 'Server error'});
+        console.error('GetInsights error: ', error);
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -67,13 +55,12 @@ const buildMonthlyInsight = async (userId) => {
                 GROUP BY 1
                 ORDER BY 1 
             )
-
             SELECT 
                 (SELECT income FROM current_month) AS income,
                 (SELECT expense FROM current_month) AS expense,
                 (SELECT JSON_AGG(breakdown) FROM breakdown) AS breakdown,
                 (SELECT JSON_AGG(trend) FROM trend) AS trend`,
-            [userId]
+        [userId]
     );
 
     const row = data.rows[0];
@@ -103,7 +90,7 @@ const buildMonthlyInsight = async (userId) => {
     const periodEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     return { content, periodStart, periodEnd };
-}
+};
 
 const buildSavingTips = async (userId) => {
     const top = await pool.query(
@@ -123,7 +110,7 @@ const buildSavingTips = async (userId) => {
         `SELECT COALESCE(SUM(amount), 0) AS income
         FROM transactions
         WHERE user_id = $1
-            AND type ='income'
+            AND type = 'income'
             AND transaction_date >= CURRENT_DATE - INTERVAL '30 days'`,
         [userId]
     );
@@ -140,14 +127,14 @@ const buildSavingTips = async (userId) => {
         currency,
     });
 
-    return { content , periodStart: null, periodEnd: null };
+    return { content, periodStart: null, periodEnd: null };
 };
 
 const buildBudgetAlert = async (userId, categoryId) => {
-    if(!categoryId) {
+    if (!categoryId) {
         const err = new Error('categoryId is required for budget_alert');
         err.status = 400;
-        throw err
+        throw err;
     }
 
     const budgetRow = await pool.query(
@@ -156,16 +143,16 @@ const buildBudgetAlert = async (userId, categoryId) => {
                 SELECT SUM(amount) FROM transactions
                 WHERE user_id = b.user_id
                     AND category_id = b.category_id
-                    AND type ='expense'
+                    AND type = 'expense'
                     AND transaction_date >= DATE_TRUNC('month', CURRENT_DATE)
-                ), 0 ) AS spent
+                ), 0) AS spent
         FROM budgets b
         JOIN categories c ON c.id = b.category_id
         WHERE b.user_id = $1 AND b.category_id = $2`,
         [userId, categoryId]
     );
 
-    if(budgetRow.rows.length === 0){
+    if (budgetRow.rows.length === 0) {
         const err = new Error('Budget not found for category');
         err.status = 404;
         throw err;
@@ -183,17 +170,17 @@ const buildBudgetAlert = async (userId, categoryId) => {
         spentAmount: parseFloat(b.spent),
         daysIntoPeriod,
         totalPeriodDays,
-        currency
+        currency,
     });
 
-    return { content, periodStart: null, periodEnd: null }
-}
+    return { content, periodStart: null, periodEnd: null };
+};
 
-export const generateInsight = async(req, res) => {
-    const {type, categoryId, generatedAt} = req.body;
+export const generateInsight = async (req, res) => {
+    const { type, categoryId } = req.body; // removed generatedAt
 
-    if(!type){
-        return res.status(400).json({message: 'Insight type is required'});
+    if (!type) {
+        return res.status(400).json({ message: 'Insight type is required' });
     }
 
     try {
@@ -203,27 +190,22 @@ export const generateInsight = async(req, res) => {
         } else if (type === 'savings_tips') {
             result = await buildSavingTips(req.userId);
         } else if (type === 'budget_alert') {
-            result = await buildBudgetAlert(req.userId, categoryId)
+            result = await buildBudgetAlert(req.userId, categoryId);
         } else {
-            return res.status(400).json({message: 'Unknown insight type'})
+            return res.status(400).json({ message: 'Unknown insight type' });
         }
 
-        const parsedGeneratedAt = generatedAt ? new Date(generatedAt) : null;
-        const createdAt = parsedGeneratedAt && !Number.isNaN(parsedGeneratedAt.getTime())
-            ? formatLocalTimestamp(parsedGeneratedAt)
-            : formatLocalTimestamp();
-
-
+        // Let Postgres set created_at via NOW() in UTC — no manual timestamp
         const inserted = await pool.query(
-            `INSERT INTO ai_insights (user_id, insight_type, period_start, period_end, content_json, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO ai_insights (user_id, insight_type, period_start, period_end, content_json)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *`,
-            [req.userId, type, result.periodStart, result.periodEnd, result.content, createdAt]
+            [req.userId, type, result.periodStart, result.periodEnd, result.content]
         );
 
         res.status(201).json(inserted.rows[0]);
     } catch (error) {
         console.error('GenerateInsight error:', error);
-        res.status(error.status || 500).json({message: error.message || 'Server error'});
+        res.status(error.status || 500).json({ message: error.message || 'Server error' });
     }
-}
+};
