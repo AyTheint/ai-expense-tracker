@@ -72,9 +72,9 @@ const Budgets = () => {
     });
     const [analyzing, setAnalyzing] = useState(false);
 
-    const fetchData = async () => {
+    const fetchData = async (showSpinner = true) => {
         try {
-            setLoading(true);
+            if (showSpinner) setLoading(true);
             const [bRes, cRes] = await Promise.all([
                 api.get(API_PATHS.BUDGETS.LIST),
                 api.get(API_PATHS.CATEGORIES.LIST),
@@ -84,7 +84,33 @@ const Budgets = () => {
         } catch (err) {
             toast.error('Failed to load budgets');
         } finally {
-            setLoading(false);
+            if (showSpinner) setLoading(false);
+        }
+    };
+
+    // Initial load — show spinner
+    useEffect(() => { fetchData(true); }, []);
+
+    // After save/delete — silent refresh, no spinner
+    const onSaved = () => {
+        setModalOpen(false);
+        localStorage.removeItem('budget_analyses');
+        setAnalyses({});
+        fetchData(false); // no spinner, updates instantly
+        notifyNotificationsUpdate();
+    };
+
+    const onDelete = async (id) => {
+        if (!confirm('Delete this budget?')) return;
+        try {
+            await api.delete(API_PATHS.BUDGETS.DELETE(id));
+            toast.success('Budget deleted');
+            localStorage.removeItem('budget_analyses');
+            setAnalyses({});
+            fetchData(false); // no spinner
+            notifyNotificationsUpdate();
+        } catch (err) {
+            toast.error('Failed to delete');
         }
     };
 
@@ -106,35 +132,8 @@ const Budgets = () => {
         }
     };
 
-    useEffect(() => { fetchData(); 
-                    // analyzeAll(); 
-                }, []);
-
     const onEdit = (b) => { setEditing(b); setModalOpen(true); };
     const onCreate = () => { setEditing(null); setModalOpen(true); };
-
-    const onDelete = async (id) => {
-        if (!confirm('Delete this budget?')) return;
-        try {
-            await api.delete(API_PATHS.BUDGETS.DELETE(id));
-            toast.success('Budget deleted');
-            localStorage.removeItem('budget_analyses'); // clear stale analysis
-            setAnalyses({});
-            fetchData();
-            // analyzeAll();
-            notifyNotificationsUpdate();
-        } catch (err) {
-            toast.error('Failed to delete');
-        }
-    };
-
-    const onSaved = () => {
-        setModalOpen(false);
-        localStorage.removeItem('budget_analyses'); // clear stale analysis
-        setAnalyses({});
-        // analyzeAll();
-        notifyNotificationsUpdate();
-    };
 
     const hasAnalyses = Object.keys(analyses).length > 0;
 

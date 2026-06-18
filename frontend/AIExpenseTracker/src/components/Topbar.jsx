@@ -27,6 +27,7 @@ const Topbar = () => {
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [notificationsLoading, setNotificationsLoading] = useState(false);
+    const [notificationsSeen, setNotificationsSeen] = useState(false);
     const wrapperRef = useRef(null);
     const searchInputRef = useRef(null);
     const navigate = useNavigate();
@@ -72,6 +73,7 @@ const Topbar = () => {
     const fetchNotifications = useCallback(async () => {
         if (!user) return;
         setNotificationsLoading(true);
+        setNotificationsSeen(false);
 
         try {
             const res = await api.get(API_PATHS.NOTIFICATIONS.LIST);
@@ -193,12 +195,13 @@ const Topbar = () => {
                         setSearchOpen(false);
                         if (!notificationsOpen) {
                             fetchNotifications();
+                            setNotificationsSeen(true);
                         }
                     }}
                     className="relative h-9 w-9 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 flex items-center justify-center transition"
                 >
                     <Bell size={17} />
-                    {notifications.length > 0 && (
+                    {notifications.length > 0 && !notificationsSeen && (
                         <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full ring-2 ring-white" />
                     )}
                 </button>

@@ -71,7 +71,7 @@ const Dashboard = () => {
                 <KpiCard label="Balance"      value={formatCurrency(summary.balance, currency)}          icon={Wallet}      accent="emerald" />
                 <KpiCard label="Income"       value={formatCurrency(summary.incomeThisMonth, currency)}  icon={TrendingUp}  accent="orange"  delta={summary.incomeDelta} />
                 <KpiCard label="Expenses"     value={formatCurrency(summary.expenseThisMonth, currency)} icon={TrendingDown} accent="rose"   delta={summary.expenseDelta} />
-                <KpiCard label="Savings Rate" value={`${(summary.savingRate ?? 0).toFixed(1)}%`} icon={PiggyBank} accent="blue" />          
+                <KpiCard label="Savings Rate" value={`${(summary.savingsRate ?? 0).toFixed(1)}%`} icon={PiggyBank} accent="blue" />          
             </div>
 
             {/* Charts */}
