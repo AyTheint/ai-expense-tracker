@@ -12,6 +12,16 @@ const getUserCurrency = async (userId) => {
     return result.rows[0]?.currency || 'USD';
 };
 
+const formatLocalTimestamp = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 export const getInsights = async (req, res) => {
     try {
         const result = await pool.query(
@@ -83,7 +93,7 @@ const buildMonthlyInsight = async (userId) => {
         previousMonths: (row.trend || []).map(t => ({
             month: t.month,
             income: parseFloat(t.income),
-            expenses: parseFloat(t.expenses),
+            expenses: parseFloat(t.expense),
         })),
         currency,
     });
@@ -180,7 +190,7 @@ const buildBudgetAlert = async (userId, categoryId) => {
 }
 
 export const generateInsight = async(req, res) => {
-    const {type, categoryId} = req.body;
+    const {type, categoryId, generatedAt} = req.body;
 
     if(!type){
         return res.status(400).json({message: 'Insight type is required'});
@@ -190,7 +200,7 @@ export const generateInsight = async(req, res) => {
         let result;
         if (type === 'monthly_summary') {
             result = await buildMonthlyInsight(req.userId);
-        } else if (type === 'saving_tips') {
+        } else if (type === 'savings_tips') {
             result = await buildSavingTips(req.userId);
         } else if (type === 'budget_alert') {
             result = await buildBudgetAlert(req.userId, categoryId)
@@ -198,12 +208,17 @@ export const generateInsight = async(req, res) => {
             return res.status(400).json({message: 'Unknown insight type'})
         }
 
+        const parsedGeneratedAt = generatedAt ? new Date(generatedAt) : null;
+        const createdAt = parsedGeneratedAt && !Number.isNaN(parsedGeneratedAt.getTime())
+            ? formatLocalTimestamp(parsedGeneratedAt)
+            : formatLocalTimestamp();
+
 
         const inserted = await pool.query(
-            `INSERT INTO ai_insights (user_id, insight_type, period_start, period_end, content_json)
-            VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO ai_insights (user_id, insight_type, period_start, period_end, content_json, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *`,
-            [req.userId, type, result.periodStart, result.periodEnd, result.content]
+            [req.userId, type, result.periodStart, result.periodEnd, result.content, createdAt]
         );
 
         res.status(201).json(inserted.rows[0]);

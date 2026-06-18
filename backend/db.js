@@ -7,6 +7,9 @@ const { Pool, types } = pg;
 
 // Return DATE columns as plain 'YYYY-MM-DD' strings instead of JavaScript Date objects
 types.setTypeParser(1082, (val) => val);
+// Keep TIMESTAMP WITHOUT TIME ZONE columns as raw strings so the client can
+// apply its own timezone handling without pg shifting the value.
+// types.setTypeParser(1114, (val) => val);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

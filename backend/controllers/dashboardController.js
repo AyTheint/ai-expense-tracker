@@ -34,13 +34,13 @@ export const getSummary = async (req, res) => {
         const incomeLastMonth = parseFloat(row.income_last_month);
         const expenseLastMonth = parseFloat(row.expense_last_month);
         const balance = incomeThisMonth - expenseThisMonth;
-        const savingRate = incomeThisMonth > 0 ? (balance / incomeThisMonth) * 100 : 0;
+        const savingsRate = incomeThisMonth > 0 ? (balance / incomeThisMonth) * 100 : 0;
         
         res.json({
             incomeThisMonth,
             expenseThisMonth,
             balance,
-            savingRate,
+            savingsRate,
             incomeDelta: pctChange(incomeThisMonth, incomeLastMonth),
             expenseDelta: pctChange(expenseThisMonth, expenseLastMonth)
         });

@@ -19,6 +19,124 @@ const stripMarkdown = (text) => {
     return cleaned.trim();
 }
 
+// const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+// const toNumber = (value) => Number(value) || 0;
+
+// const buildMonthlyFallback = ({
+//     totalIncome,
+//     totalExpenses,
+//     savingsRate,
+//     expenseBreakdown,
+//     currency,
+// }) => {
+//     const topCategory = expenseBreakdown[0]?.category || null;
+//     const savingsGap = Math.max(0, totalIncome - totalExpenses);
+//     const healthScore = clamp(
+//         Math.round(50 + savingsRate * 0.5 - (totalExpenses > totalIncome ? 10 : 0)),
+//         0,
+//         100
+//     );
+
+//     const summary = totalIncome > 0
+//         ? `You brought in ${currency} ${totalIncome.toFixed(2)} and spent ${currency} ${totalExpenses.toFixed(2)} this month. ${savingsRate >= 0 ? 'You stayed within your income.' : 'Your expenses are currently above your income, so this month needs attention.'}`
+//         : `There is no reported income for this month, so the main focus is controlling spending and adding income data for a fuller picture.`;
+
+//     const highlights = totalIncome > 0
+//         ? [
+//             `You kept ${currency} ${savingsGap.toFixed(2)} in the month as a buffer.`,
+//             topCategory ? `${topCategory} is your largest spending category, so you have a clear place to optimize.` : 'Your spending data is simple enough to review quickly.',
+//         ]
+//         : ['You have enough expense data to spot spending patterns.', 'Adding income transactions will make the analysis more accurate.'];
+
+//     const concerns = totalIncome > 0
+//         ? [
+//             totalExpenses > totalIncome
+//                 ? 'Your spending is higher than your income, which can create cash flow pressure.'
+//                 : 'A large share of your income is going toward expenses, so savings may be tighter than ideal.',
+//             topCategory ? `Keep an eye on ${topCategory}; it is currently the biggest driver of your total spend.` : 'There is not enough category detail to identify the biggest pressure point.',
+//         ]
+//         : ['Without income data, it is hard to judge whether your spending is sustainable.', 'Tracking income will help the score reflect your real financial health.'];
+
+//     const recommendations = [
+//         {
+//             title: topCategory ? `Trim ${topCategory}` : 'Review top spending',
+//             detail: topCategory
+//                 ? `Set a target to reduce ${topCategory} by about 10% next month and recheck the impact on your savings.`
+//                 : 'Review your highest expense categories and look for one recurring cost to reduce.',
+//         },
+//         {
+//             title: 'Set a weekly limit',
+//             detail: 'Split your monthly budget into a weekly spending cap so overruns show up earlier and are easier to correct.',
+//         },
+//         {
+//             title: 'Automate a transfer',
+//             detail: savingsGap > 0
+//                 ? `Move about ${currency} ${(savingsGap * 0.25).toFixed(2)} into savings automatically each month.`
+//                 : 'Even a small automatic transfer can build a buffer and improve consistency over time.',
+//         },
+//     ];
+
+//     return {
+//         summary,
+//         highlights,
+//         concerns,
+//         recommendations,
+//         topSpendingCategory: topCategory,
+//         estimatedMonthlySavings: Number((savingsGap * 0.1).toFixed(2)),
+//         healthScore,
+//     };
+// };
+
+// const buildSavingTipsFallback = ({ topCategories, monthlyIncome, currency }) => {
+//     const categories = topCategories.slice(0, 4);
+//     const tips = categories.map((item, index) => {
+//         const savings = Math.max(5, Math.round(toNumber(item.amount) * 0.1));
+//         return {
+//             category: item.category,
+//             title: `Reduce ${item.category} by 10%`,
+//             detail: `Try one small change in ${item.category.toLowerCase()} spending and aim to save about ${currency} ${savings} this month.`,
+//             estimatedSavings: savings,
+//         };
+//     });
+
+//     while (tips.length < 4) {
+//         const fallbackNumber = tips.length + 1;
+//         tips.push({
+//             category: 'General',
+//             title: `Build a ${fallbackNumber * 5}% buffer`,
+//             detail: monthlyIncome > 0
+//                 ? `Redirect a small portion of your ${currency} ${monthlyIncome.toFixed(2)} monthly income into savings before spending it.`
+//                 : 'Start with a fixed small transfer and increase it once income is tracked consistently.',
+//             estimatedSavings: Math.max(10, Math.round(monthlyIncome * 0.05) || 10),
+//         });
+//     }
+
+//     return {
+//         overallTip: topCategories.length > 0
+//             ? `Focus on the categories that make up most of your spending first. Even a small cut can create meaningful monthly savings.`
+//             : 'Track a few more transactions so the app can identify the most useful savings opportunities.',
+//         tips,
+//     };
+// };
+
+// const buildBudgetAlertFallback = ({ categoryName, budgetAmount, spentAmount, daysIntoPeriod, totalPeriodDays, currency }) => {
+//     const percentUsed = budgetAmount > 0 ? (spentAmount / budgetAmount) * 100 : 0;
+//     const remaining = Math.max(0, budgetAmount - spentAmount);
+//     const severity = percentUsed >= 100 ? 'critical' : percentUsed >= 70 ? 'warning' : 'info';
+
+//     return {
+//         severity,
+//         title: `${categoryName} budget update`,
+//         message: `You have spent ${currency} ${spentAmount.toFixed(2)} of your ${currency} ${budgetAmount.toFixed(2)} ${categoryName.toLowerCase()} budget after ${daysIntoPeriod} of ${totalPeriodDays} days. ${remaining > 0 ? `You still have ${currency} ${remaining.toFixed(2)} left.` : 'You are already over budget.'}`,
+//         suggestions: [
+//             'Pause any non-essential purchases in this category for a few days.',
+//             'Review recent transactions to spot avoidable repeats.',
+//             'Move leftover budget from lower-priority categories if needed.',
+//         ],
+//     };
+// };
+
 export const generateMonthlyInsights = async ({
     totalIncome,
     totalExpenses,
@@ -32,7 +150,7 @@ export const generateMonthlyInsights = async ({
         : '- No expenses recorded yet';
 
     const trendsText = previousMonths.length > 0
-        ? previousMonths.map(m => `- ${m.month}: Income ${currency} ${m.income.toFixed(2)}, Expenses ${currency} ${m.expenses.toFixed(2)}`).join('\n')
+        ? previousMonths.map(m => `- ${m.month}: Income ${currency} ${m.income.toFixed(2)}, Expenses ${currency} ${m.expense.toFixed(2)}`).join('\n')
         : '- No previous month data available';
 
     const prompt = `Analyze this user's monthly financial data and generate accurate insights
@@ -66,14 +184,21 @@ export const generateMonthlyInsights = async ({
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.5-flash-lite",
             contents: prompt,
         });
         const cleaned = stripMarkdown(response.text);
         return JSON.parse(cleaned);
     } catch (err) {
         console.error("Error generating insights:", err);
-        throw new Error("Failed to generate monthly insights. PLease try again.");
+         throw new Error("Failed to generate monthly insights. PLease try again.");
+        // return buildMonthlyFallback({
+        //     totalIncome,
+        //     totalExpenses,
+        //     savingsRate,
+        //     expenseBreakdown,
+        //     currency,
+        // });
     }
 };
 
@@ -81,18 +206,18 @@ export const generateBudgetAlert = async ({
     categoryName,
     budgetAmount,
     spentAmount,
-    dayIntoPeriod,
+    daysIntoPeriod,
     totalPeriodDays,
     currency = 'USD'
 }) => {
     const percentUsed = ((spentAmount / budgetAmount) * 100).toFixed(1);
-    const daysLeft = totalPeriodDays - dayIntoPeriod;
+    const daysLeft = totalPeriodDays - daysIntoPeriod;
 
     const prompt = `A user is tracking a budget. Generate a helpful alert.
     Category: ${categoryName}
     Budget: ${currency} ${budgetAmount.toFixed(2)}
     Spent so far: ${currency} ${spentAmount.toFixed(2)} (${percentUsed}% used)
-    Days into period: ${dayIntoPeriod} / ${totalPeriodDays} (${daysLeft} days remaining)
+    Days into period: ${daysIntoPeriod} / ${totalPeriodDays} (${daysLeft} days remaining)
     
     Return only valid JSON (no markdown):
     {
@@ -110,7 +235,7 @@ export const generateBudgetAlert = async ({
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.5-flash-lite",
             contents: prompt,
         });
         const cleaned = stripMarkdown(response.text);
@@ -118,6 +243,14 @@ export const generateBudgetAlert = async ({
     } catch (err) {
         console.error("Error generating budget alert:", err);
         throw new Error("Failed to generate budget alert. Please try again.");
+        // return buildBudgetAlertFallback({
+        //     categoryName,
+        //     budgetAmount,
+        //     spentAmount,
+        //     daysIntoPeriod,
+        //     totalPeriodDays,
+        //     currency,
+        // });
     }
 }
 
@@ -150,7 +283,7 @@ export const generateSavingTips = async ({ topCategories, monthlyIncome, currenc
 
     try{
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-flash-lite',
             contents: prompt,
         });
 
@@ -159,6 +292,11 @@ export const generateSavingTips = async ({ topCategories, monthlyIncome, currenc
     } catch (err) {
         console.error('Gemini API error (saving tips): ', err);
         throw new Error('Failed to generate saving tips.')
+        // return buildSavingTipsFallback({
+        //     topCategories,
+        //     monthlyIncome,
+        //     currency,
+        // });
     }
 };
 
@@ -193,7 +331,7 @@ export const analyzeTransactionList = async ({ transactions, currency = 'USD'}) 
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-flash-lite',
             contents: prompt,
         })
         const cleaned = stripMarkdown(response.text);
@@ -206,10 +344,10 @@ export const analyzeTransactionList = async ({ transactions, currency = 'USD'}) 
 
 export const analyzeBudgetList = async ({ budgets, currency = 'USD' }) => {
     const lines = budgets.map((b) => {
-        const spent = parseFloat(b.spent);
-        const total = parseFloat(b.amount);
+        const spent = Number(b.spent) || 0;
+        const total = Number(b.amount) || 0;
         const pct = total > 0 ? ((spent / total) * 100).toFixed(1) : '0';
-        return `Budget ID ${b.id} | Category: ${b.category_name} | Limit: ${currency} ${total.toFixed(2)} | Spent: ${currency} ${b.spent}`
+        return `Budget ID ${b.id} | Category: ${b.category_name} | Limit: ${currency} ${total.toFixed(2)} | Spent: ${currency} ${spent.toFixed(2)}`
     }).join('\n');
 
     const prompt = `You're a personal finance assistant. Analyze each budget below and provide a one-sentence verdict on how well the user is managing their finances, highlighting their biggest strength and biggest risk.
@@ -228,7 +366,7 @@ export const analyzeBudgetList = async ({ budgets, currency = 'USD' }) => {
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-flash-lite',
             contents: prompt,
         });
         const cleaned =stripMarkdown(response.text);
